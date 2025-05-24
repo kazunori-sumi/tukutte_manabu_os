@@ -60,7 +60,6 @@ pub enum EfiMemoryType {
     PERSISTENT_MEMORY,
 }
 
-
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct EfiMemoryDescriptor {
@@ -104,14 +103,14 @@ impl MemoryMapHolder {
     pub const fn new() -> MemoryMapHolder {
         MemoryMapHolder {
             memory_map_buffer: [0; MEMORY_MAP_BUFFER_SIZE],
-            memory_map_size: 0,
+            memory_map_size: MEMORY_MAP_BUFFER_SIZE,
             map_key: 0,
             descriptor_size: 0,
             descriptor_version: 0,
         }
     }
     pub fn iter(&self) -> MemoryMapIterator {
-        MemoryMapIterator { map:self, ofs: 0}
+        MemoryMapIterator { map: self, ofs: 0 }
     }
 }
 
@@ -136,7 +135,7 @@ const _: () = assert!(offset_of!(EfiBootServicesTable, locate_protocol) == 320);
 
 impl EfiBootServicesTable {
     fn get_memory_map(&self, map: &mut MemoryMapHolder) -> EfiStatus {
-        (self.get_memory_map) (
+        (self.get_memory_map)(
             &mut map.memory_map_size,
             map.memory_map_buffer.as_mut_ptr(),
             &mut map.map_key,
@@ -235,11 +234,24 @@ fn efi_main(_image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
         writeln!(w, "i = {i}").unwrap();
     }
     let mut memory_map = MemoryMapHolder::new();
-    let status = efi_system_table.boot_services.get_memory_map(&mut memory_map);
+    let status = efi_system_table
+        .boot_services
+        .get_memory_map(&mut memory_map);
     writeln!(w, "{status:?}").unwrap();
+    let mut total_memory_pages = 0;
     for e in memory_map.iter() {
+        if e.memory_type != EfiMemoryType::CONVENTIONAL_MEMORY {
+            continue;
+        }
+        total_memory_pages += e.number_of_pages;
         writeln!(w, "{e:?}").unwrap();
     }
+    let total_memory_size_mib = total_memory_pages * 4096 / 1024 / 1024;
+    writeln!(
+        w,
+        "Total: {total_memory_pages} pages = {total_memory_size_mib} MiB"
+    )
+    .unwrap();
     // println!("Hello, world!");
     loop {
         hlt();
