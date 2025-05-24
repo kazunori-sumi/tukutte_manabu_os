@@ -2,3 +2,4 @@
 
 [repository](https://github.com/hikalium/wasabi)
 [support page](https://gihyo.jp/book/2025/978-4-297-14859-1/support)
+[書籍](https://gihyo.jp/book/2025/978-4-297-14859-1)
